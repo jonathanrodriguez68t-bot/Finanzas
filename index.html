@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ahorro y dreams</title>
+<style>
+  :root {
+    --bg: #000;
+    --ink: #f5f5f7;
+    --muted: #86868b;
+    --line: rgba(255,255,255,0.12);
+    --card: #141416;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+    background:
+      radial-gradient(80% 50% at 50% -10%, #2a2a2e 0%, transparent 55%),
+      #000;
+    -webkit-font-smoothing: antialiased;
+  }
+  header, main { max-width: 1060px; margin: 0 auto; padding: 28px 24px; }
+  header { padding-top: 64px; padding-bottom: 8px; text-align: center; animation: rise .9s cubic-bezier(.22,1,.36,1) both; }
+  .eyebrow { margin: 0 0 10px; color: #a1a1a6; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; }
+  h1 { margin: 0; font-size: clamp(2.6rem, 6vw, 4.6rem); font-weight: 600; letter-spacing: -0.055em; line-height: .95; }
+  p.lead { margin: 16px auto 0; max-width: 34rem; color: var(--muted); font-size: 1.2rem; font-weight: 400; }
+  .status { color: #6e6e73; font-size: .85rem; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 42px 0 22px; }
+  .stat, .card, form.panel {
+    background: linear-gradient(180deg, #1c1c1f 0%, #121214 100%);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .stat { padding: 26px 24px 22px; animation: rise .9s cubic-bezier(.22,1,.36,1) both; }
+  .stat:nth-child(2) { animation-delay: .08s; }
+  .stat:nth-child(3) { animation-delay: .16s; }
+  .stat span { color: var(--muted); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+  .stat strong { display: block; margin-top: 10px; font-size: 2.15rem; font-weight: 600; letter-spacing: -0.05em; }
+  .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; }
+  form.panel, .card { padding: 26px; }
+  form.panel { animation: rise 1s cubic-bezier(.22,1,.36,1) both; }
+  h2 { margin: 0 0 4px; font-size: 1.55rem; letter-spacing: -0.035em; font-weight: 600; }
+  label { display: block; margin: 16px 0 7px; color: #a1a1a6; font-size: .8rem; }
+  input, select, button { font: inherit; }
+  input, select {
+    width: 100%;
+    padding: 13px 14px;
+    color: var(--ink);
+    background: #0b0b0d;
+    border: 1px solid #3a3a3c;
+    border-radius: 14px;
+    transition: border-color .25s ease, box-shadow .25s ease;
+  }
+  input:focus, select:focus { outline: none; border-color: #f5f5f7; box-shadow: 0 0 0 4px rgba(255,255,255,.08); }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  button {
+    margin-top: 20px;
+    padding: 11px 22px;
+    color: #000;
+    background: #f5f5f7;
+    border: 0;
+    border-radius: 980px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform .4s cubic-bezier(.22,1,.36,1), background .2s ease;
+  }
+  button:hover { transform: scale(1.035); background: #fff; }
+  button:active { transform: scale(.98); }
+  button.ghost, button.link {
+    margin: 0;
+    padding: 8px 14px;
+    color: #f5f5f7;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,.28);
+  }
+  button.link:hover, button.ghost:hover { background: rgba(255,255,255,.08); }
+  button.warn { color: #ff453a; border-color: transparent; }
+  .dream { margin-top: 14px; animation: rise .7s cubic-bezier(.22,1,.36,1) both; }
+  .dream-top, .actions { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .meta { color: var(--muted); }
+  .bar { height: 6px; margin: 18px 0 10px; background: #2c2c2e; border-radius: 99px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: linear-gradient(90deg, #d2d2d7, #fff); transition: width 1.1s cubic-bezier(.22,1,.36,1); }
+  ul { list-style: none; padding: 0; margin: 8px 0 0; }
+  li { display: flex; justify-content: space-between; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); animation: fade .4s ease both; }
+  .empty { color: var(--muted); }
+  @keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @media (max-width: 760px) {
+    .stats, .grid { grid-template-columns: 1fr; }
+    header { padding-top: 36px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  .reveal { opacity: 0; transform: translateY(28px); animation: none; }
+  .reveal.show { animation: rise .8s cubic-bezier(.22,1,.36,1) both; }
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">Finanzas</p>
+  <h1>Tus dreams,<br>en un solo lugar.</h1>
+  <p class="lead">Crea una meta, abona cuando quieras y baja el reporte. Todo queda guardado en tu computadora.</p>
+  <p class="status" id="status">Cargando datos…</p>
+</header>
+<main>
+  <section class="stats">
+    <div class="stat"><span>Ahorrado</span><strong id="totalSaved">$0.00</strong></div>
+    <div class="stat"><span>Falta</span><strong id="totalLeft">$0.00</strong></div>
+    <div class="stat"><span>Dreams</span><strong id="dreamCount">0</strong></div>
+  </section>
+  <div class="grid">
+    <form class="panel" id="dreamForm">
+      <h2>Nuevo dream</h2>
+      <label>Nombre</label>
+      <input id="dreamName" required placeholder="Viaje, laptop, fondo de emergencia" />
+      <div class="row">
+        <div>
+          <label>Precio</label>
+          <input id="dreamPrice" type="number" min="0.01" step="0.01" required placeholder="0.00" />
+        </div>
+        <div>
+          <label>Fecha límite</label>
+          <input id="dreamDate" type="date" required />
+        </div>
+      </div>
+      <button type="submit">Crear dream</button>
+    </form>
+    <form class="panel" id="payForm">
+      <h2>Abono a un dream existente</h2>
+      <label>Dream</label>
+      <select id="payDream" required></select>
+      <div class="row">
+        <div>
+          <label>Monto</label>
+          <input id="payAmount" type="number" min="0.01" step="0.01" required placeholder="0.00" />
+        </div>
+        <div>
+          <label>Fecha</label>
+          <input id="payDate" type="date" required />
+        </div>
+      </div>
+      <button type="submit">Guardar abono</button>
+    </form>
+  </div>
+  <section id="list" style="margin-top: 18px;"></section>
+</main>
+<script>
+const money = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const today = () => new Date().toISOString().slice(0, 10);
+let state = { dreams: [], payments: [] };
+
+function pace(left, iso) {
+  const end = new Date(iso + "T00:00:00");
+  const days = Math.max(1, Math.ceil((end - new Date()) / 86400000));
+  return left <= 0 ? 0 : left / Math.max(1, days / 30.44);
+}
+
+async function persist() {
+  const res = await fetch("/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(state)
+  });
+  if (!res.ok) throw new Error("No se pudo guardar");
+  document.getElementById("status").textContent = "Guardado en data/dreams.json y data/payments.json";
+}
+
+function render() {
+  const savedBy = {};
+  state.payments.forEach((p) => { savedBy[p.dreamId] = (savedBy[p.dreamId] || 0) + Number(p.amount); });
+  const totalSaved = state.payments.reduce((s, p) => s + Number(p.amount), 0);
+  const totalTarget = state.dreams.reduce((s, d) => s + Number(d.price), 0);
+  document.getElementById("totalSaved").textContent = money(totalSaved);
+  document.getElementById("totalLeft").textContent = money(Math.max(0, totalTarget - totalSaved));
+  document.getElementById("dreamCount").textContent = state.dreams.length;
+  const select = document.getElementById("payDream");
+  select.innerHTML = state.dreams.length
+    ? state.dreams.map((d) => `<option value="${d.id}">${d.name}</option>`).join("")
+    : `<option value="">Crea un dream primero</option>`;
+  const list = document.getElementById("list");
+  if (!state.dreams.length) {
+    list.innerHTML = `<p class="empty">Todavía no hay dreams. Si ya tienes archivos JSON, colócalos en la carpeta data y recarga.</p>`;
+    return;
+  }
+  list.innerHTML = state.dreams.map((d) => {
+    const saved = savedBy[d.id] || 0;
+    const left = Math.max(0, Number(d.price) - saved);
+    const pct = Math.min(100, Math.round((saved / Number(d.price)) * 100));
+    const pays = state.payments.filter((p) => p.dreamId === d.id).sort((a, b) => b.date.localeCompare(a.date));
+    const history = pays.length
+      ? `<ul>${pays.map((p) => `<li><span>${p.date}</span><span>${money(p.amount)} <button class="ghost warn" data-del="${p.id}">quitar</button></span></li>`).join("")}</ul>`
+      : `<p class="empty">Sin abonos todavía. Usa el formulario de arriba para agregar uno.</p>`;
+    return `<article class="card dream">
+      <div class="dream-top">
+        <div>
+          <h2>${d.name}</h2>
+          <div class="meta">Meta ${money(d.price)} · límite ${d.date}</div>
+        </div>
+        <div class="actions">
+          <button class="link" data-pdf="${d.id}">Reporte PDF</button>
+          <button class="ghost warn" data-del-dream="${d.id}">eliminar</button>
+        </div>
+      </div>
+      <div class="bar"><div style="width:${pct}%"></div></div>
+      <div class="meta">${money(saved)} ahorrados · faltan ${money(left)} · ${pct}%${left > 0 ? ` · unos ${money(pace(left, d.date))} al mes` : " · meta cumplida"}</div>
+      ${history}
+    </article>`;
+  }).join("");
+  list.querySelectorAll("[data-del]").forEach((btn) => btn.onclick = async () => {
+    state.payments = state.payments.filter((p) => p.id !== btn.dataset.del);
+    await persist(); render();
+  });
+  list.querySelectorAll("[data-del-dream]").forEach((btn) => btn.onclick = async () => {
+    const id = btn.dataset.delDream;
+    state.dreams = state.dreams.filter((d) => d.id !== id);
+    state.payments = state.payments.filter((p) => p.dreamId !== id);
+    await persist(); render();
+  });
+  list.querySelectorAll("[data-pdf]").forEach((btn) => btn.onclick = () => {
+    window.location.href = "/api/report/" + btn.dataset.pdf;
+  });
+}
+
+document.getElementById("payDate").value = today();
+document.getElementById("dreamForm").onsubmit = async (e) => {
+  e.preventDefault();
+  state.dreams.push({
+    id: crypto.randomUUID(),
+    name: document.getElementById("dreamName").value.trim(),
+    price: Number(document.getElementById("dreamPrice").value),
+    date: document.getElementById("dreamDate").value
+  });
+  await persist();
+  e.target.reset();
+  render();
+};
+document.getElementById("payForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const dreamId = document.getElementById("payDream").value;
+  if (!dreamId) return;
+  state.payments.push({
+    id: crypto.randomUUID(),
+    dreamId,
+    amount: Number(document.getElementById("payAmount").value),
+    date: document.getElementById("payDate").value
+  });
+  await persist();
+  e.target.reset();
+  document.getElementById("payDate").value = today();
+  render();
+};
+
+fetch("/api/data").then((r) => r.json()).then((data) => {
+  state = { dreams: data.dreams || [], payments: data.payments || [] };
+  document.getElementById("status").textContent = "Datos leídos desde data/dreams.json y data/payments.json";
+  render();
+}).catch(() => {
+  document.getElementById("status").textContent = "No pude leer los JSON. Abre esta página desde el servidor, no como archivo suelto.";
+});
+
+function watchReveal() {
+  document.querySelectorAll(".stat, form.panel, .dream, header").forEach((el) => el.classList.add("reveal"));
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("show"); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+}
+const _render = render;
+render = function () { _render(); watchReveal(); };
+watchReveal();
+
+</script>
+</body>
+</html>
