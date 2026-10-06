@@ -81,8 +81,13 @@
   }
   button.link:hover, button.ghost:hover { background: rgba(255,255,255,.08); }
   button.warn { color: #ff453a; border-color: transparent; }
+  .form-error { color: #ff453a; font-size: .85rem; margin: 12px 0 0; }
   .dream { margin-top: 14px; animation: rise .7s cubic-bezier(.22,1,.36,1) both; }
   .dream-top, .actions { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .actions { flex-wrap: wrap; justify-content: flex-end; }
+  .dream-edit { margin-bottom: 4px; }
+  .edit-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 20px; }
+  .edit-actions button { margin-top: 0; }
   .meta { color: var(--muted); }
   .bar { height: 6px; margin: 18px 0 10px; background: #2c2c2e; border-radius: 99px; overflow: hidden; }
   .bar > div { height: 100%; width: 0; background: linear-gradient(90deg, #d2d2d7, #fff); transition: width 1.1s cubic-bezier(.22,1,.36,1); }
@@ -132,6 +137,7 @@
           <input id="dreamDate" type="date" required />
         </div>
       </div>
+      <p class="form-error" id="dreamFormError" hidden></p>
       <button type="submit">Crear dream</button>
     </form>
     <form class="panel" id="payForm">
@@ -156,7 +162,18 @@
 <script>
 const money = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const today = () => new Date().toISOString().slice(0, 10);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[c]));
 let state = { dreams: [], payments: [] };
+let editingId = null;
+
+function dreamFieldError(name, price) {
+  if (!String(name || "").trim()) return "Escribe un nombre.";
+  const amount = Number(price);
+  if (!Number.isFinite(amount) || amount < 0.01) return "El precio debe ser un número mayor que 0.";
+  return "";
+}
 
 function pace(left, iso) {
   const end = new Date(iso + "T00:00:00");
@@ -183,9 +200,11 @@ function render() {
   document.getElementById("totalLeft").textContent = money(Math.max(0, totalTarget - totalSaved));
   document.getElementById("dreamCount").textContent = state.dreams.length;
   const select = document.getElementById("payDream");
+  const selectedPay = select.value;
   select.innerHTML = state.dreams.length
-    ? state.dreams.map((d) => `<option value="${d.id}">${d.name}</option>`).join("")
+    ? state.dreams.map((d) => `<option value="${esc(d.id)}">${esc(d.name)}</option>`).join("")
     : `<option value="">Crea un dream primero</option>`;
+  if (selectedPay && state.dreams.some((d) => d.id === selectedPay)) select.value = selectedPay;
   const list = document.getElementById("list");
   if (!state.dreams.length) {
     list.innerHTML = `<p class="empty">Todavía no hay dreams. Si ya tienes archivos JSON, colócalos en la carpeta data y recarga.</p>`;
@@ -193,23 +212,39 @@ function render() {
   }
   list.innerHTML = state.dreams.map((d) => {
     const saved = savedBy[d.id] || 0;
-    const left = Math.max(0, Number(d.price) - saved);
-    const pct = Math.min(100, Math.round((saved / Number(d.price)) * 100));
+    const price = Number(d.price);
+    const left = Math.max(0, price - saved);
+    const pct = price > 0 ? Math.min(100, Math.round((saved / price) * 100)) : 0;
     const pays = state.payments.filter((p) => p.dreamId === d.id).sort((a, b) => b.date.localeCompare(a.date));
     const history = pays.length
-      ? `<ul>${pays.map((p) => `<li><span>${p.date}</span><span>${money(p.amount)} <button class="ghost warn" data-del="${p.id}">quitar</button></span></li>`).join("")}</ul>`
+      ? `<ul>${pays.map((p) => `<li><span>${p.date}</span><span>${money(p.amount)} <button class="ghost warn" data-del="${esc(p.id)}">quitar</button></span></li>`).join("")}</ul>`
       : `<p class="empty">Sin abonos todavía. Usa el formulario de arriba para agregar uno.</p>`;
+    const top = editingId === d.id
+      ? `<form class="dream-edit" data-edit-form="${esc(d.id)}">
+          <h2>Editar dream</h2>
+          <label>Nombre</label>
+          <input name="name" required value="${esc(d.name)}" />
+          <label>Precio</label>
+          <input name="price" type="number" min="0.01" step="0.01" required value="${esc(d.price)}" />
+          <p class="form-error" hidden></p>
+          <div class="edit-actions">
+            <button type="submit">Guardar cambios</button>
+            <button type="button" class="ghost" data-cancel-edit>Cancelar</button>
+          </div>
+        </form>`
+      : `<div class="dream-top">
+          <div>
+            <h2>${esc(d.name)}</h2>
+            <div class="meta">Meta ${money(d.price)} · límite ${d.date}</div>
+          </div>
+          <div class="actions">
+            <button class="link" data-pdf="${esc(d.id)}">Reporte PDF</button>
+            <button class="ghost" data-edit-dream="${esc(d.id)}">editar</button>
+            <button class="ghost warn" data-del-dream="${esc(d.id)}">eliminar</button>
+          </div>
+        </div>`;
     return `<article class="card dream">
-      <div class="dream-top">
-        <div>
-          <h2>${d.name}</h2>
-          <div class="meta">Meta ${money(d.price)} · límite ${d.date}</div>
-        </div>
-        <div class="actions">
-          <button class="link" data-pdf="${d.id}">Reporte PDF</button>
-          <button class="ghost warn" data-del-dream="${d.id}">eliminar</button>
-        </div>
-      </div>
+      ${top}
       <div class="bar"><div style="width:${pct}%"></div></div>
       <div class="meta">${money(saved)} ahorrados · faltan ${money(left)} · ${pct}%${left > 0 ? ` · unos ${money(pace(left, d.date))} al mes` : " · meta cumplida"}</div>
       ${history}
@@ -223,20 +258,79 @@ function render() {
     const id = btn.dataset.delDream;
     state.dreams = state.dreams.filter((d) => d.id !== id);
     state.payments = state.payments.filter((p) => p.dreamId !== id);
+    if (editingId === id) editingId = null;
     await persist(); render();
   });
   list.querySelectorAll("[data-pdf]").forEach((btn) => btn.onclick = () => {
     window.location.href = "/api/report/" + btn.dataset.pdf;
   });
+  list.querySelectorAll("[data-edit-dream]").forEach((btn) => btn.onclick = () => {
+    editingId = btn.dataset.editDream;
+    render();
+  });
+  const editForm = list.querySelector("[data-edit-form]");
+  if (editForm) {
+    const nameInput = editForm.elements.name;
+    nameInput.focus();
+    editForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const id = editForm.dataset.editForm;
+      const name = editForm.elements.name.value.trim();
+      const price = Number(editForm.elements.price.value);
+      const errorEl = editForm.querySelector(".form-error");
+      const error = dreamFieldError(name, price);
+      if (error) {
+        errorEl.hidden = false;
+        errorEl.textContent = error;
+        return;
+      }
+      const dream = state.dreams.find((d) => d.id === id);
+      if (!dream) return;
+      const previous = { name: dream.name, price: dream.price };
+      dream.name = name;
+      dream.price = price;
+      try {
+        await persist();
+      } catch (err) {
+        dream.name = previous.name;
+        dream.price = previous.price;
+        errorEl.hidden = false;
+        errorEl.textContent = "No se pudo guardar. Intenta de nuevo.";
+        return;
+      }
+      editingId = null;
+      render();
+    };
+    editForm.querySelector("[data-cancel-edit]").onclick = () => {
+      editingId = null;
+      render();
+    };
+    editForm.onkeydown = (e) => {
+      if (e.key === "Escape") {
+        editingId = null;
+        render();
+      }
+    };
+  }
 }
 
 document.getElementById("payDate").value = today();
 document.getElementById("dreamForm").onsubmit = async (e) => {
   e.preventDefault();
+  const errorEl = document.getElementById("dreamFormError");
+  const name = document.getElementById("dreamName").value.trim();
+  const price = Number(document.getElementById("dreamPrice").value);
+  const error = dreamFieldError(name, price);
+  if (error) {
+    errorEl.hidden = false;
+    errorEl.textContent = error;
+    return;
+  }
+  errorEl.hidden = true;
   state.dreams.push({
     id: crypto.randomUUID(),
-    name: document.getElementById("dreamName").value.trim(),
-    price: Number(document.getElementById("dreamPrice").value),
+    name,
+    price,
     date: document.getElementById("dreamDate").value
   });
   await persist();
