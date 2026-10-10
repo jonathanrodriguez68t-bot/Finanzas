@@ -1,0 +1,4 @@
+# Registros locales. Los JSON que ya están en el historial se conservan;
+# esto evita versionar gastos, ventas u otros datos reales por accidente.
+data/*.json
+__pycache__/

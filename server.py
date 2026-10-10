@@ -16,6 +16,16 @@ SALES = DATA / "sales.json"
 FILES = {"dreams": DREAMS, "payments": PAYMENTS, "expenses": EXPENSES, "sales": SALES}
 PORT = int(os.environ.get("PORT", "8765"))
 HTML = ROOT / "index.html"
+ASSETS = ROOT / "assets"
+ASSET_TYPES = {
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".txt": "text/plain; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+}
 
 
 def read_json(path):
@@ -125,6 +135,25 @@ def build_pdf(lines):
     return bytes(out)
 
 
+def asset_file(url_path):
+    if not url_path.startswith("/assets/"):
+        return None
+    relative = url_path[len("/assets/"):]
+    if not relative or relative.startswith(("/", "\\")) or "\\" in relative:
+        return None
+    parts = Path(relative).parts
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    target = (ASSETS / relative).resolve()
+    try:
+        target.relative_to(ASSETS.resolve())
+    except ValueError:
+        return None
+    if not target.is_file():
+        return None
+    return target
+
+
 def report_lines(dream, payments):
     saved = sum(float(p["amount"]) for p in payments)
     price = float(dream["price"])
@@ -191,6 +220,11 @@ class Handler(BaseHTTPRequestHandler):
             safe = "".join(c if c.isascii() and c.isalnum() else "-" for c in dream["name"]).strip("-") or "dream"
             pdf = build_pdf(report_lines(dream, payments))
             self.send(200, pdf, "application/pdf", f"reporte-{safe}.pdf")
+            return
+        asset = asset_file(path)
+        if asset:
+            mime = ASSET_TYPES.get(asset.suffix.lower(), "application/octet-stream")
+            self.send(200, asset.read_bytes(), mime)
             return
         self.send(404, "No encontrado", "text/plain; charset=utf-8")
 
