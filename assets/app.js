@@ -100,7 +100,7 @@ function celebrate(name) {
   root.replaceChildren();
   const badge = document.createElement("div");
   badge.className = "celebrate-badge";
-  badge.textContent = "100%";
+  badge.textContent = "Meta cumplida";
   root.appendChild(badge);
   for (let i = 0; i < 12; i += 1) {
     const dot = document.createElement("span");
@@ -233,13 +233,13 @@ function render() {
   fillBars();
 }
 
-async function saveState(message) {
-  const before = snapshotLeft();
+async function saveState(message, before) {
+  const prior = before || snapshotLeft();
   await persist();
   const savedBy = savedMap(state.payments);
   const finished = [];
   state.dreams.forEach((dream) => {
-    const prev = before[dream.id];
+    const prev = prior[dream.id];
     if (prev !== undefined && prev > 0 && dreamLeft(dream, savedBy) <= 0) finished.push(dream.name);
   });
   render();
@@ -368,9 +368,10 @@ document.getElementById("payForm").addEventListener("submit", async (event) => {
     amount: Number(document.getElementById("payAmount").value),
     date: document.getElementById("payDate").value
   };
+  const before = snapshotLeft();
   state.payments.push(payment);
   try {
-    await saveState("Abono guardado");
+    await saveState("Abono guardado", before);
   } catch (err) {
     state.payments = state.payments.filter((item) => item.id !== payment.id);
     render();
@@ -453,10 +454,11 @@ document.getElementById("editForm").addEventListener("submit", async (event) => 
     return;
   }
   const previous = { name: dream.name, price: dream.price };
+  const before = snapshotLeft();
   dream.name = name;
   dream.price = price;
   try {
-    await saveState("Cambios guardados");
+    await saveState("Cambios guardados", before);
   } catch (err) {
     dream.name = previous.name;
     dream.price = previous.price;
