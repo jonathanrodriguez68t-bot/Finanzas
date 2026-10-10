@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Local savings tracker. Saves dreams and payments as JSON and exports a PDF report."""
+"""Local finance tracker. Saves dreams, payments, expenses and sales as JSON and exports a PDF report."""
 import json
+import os
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -8,10 +9,14 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
-ASSETS = ROOT / "assets"
 DREAMS = DATA / "dreams.json"
 PAYMENTS = DATA / "payments.json"
+EXPENSES = DATA / "expenses.json"
+SALES = DATA / "sales.json"
+FILES = {"dreams": DREAMS, "payments": PAYMENTS, "expenses": EXPENSES, "sales": SALES}
+PORT = int(os.environ.get("PORT", "8765"))
 HTML = ROOT / "index.html"
+ASSETS = ROOT / "assets"
 ASSET_TYPES = {
     ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
@@ -19,27 +24,8 @@ ASSET_TYPES = {
     ".woff": "font/woff",
     ".txt": "text/plain; charset=utf-8",
     ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
 }
-
-
-def asset_file(url_path):
-    """Resolve a /assets/... URL to a file inside the assets directory."""
-    if not url_path.startswith("/assets/"):
-        return None
-    relative = url_path[len("/assets/"):]
-    if not relative or relative.startswith(("/", "\\")) or "\\" in relative:
-        return None
-    parts = Path(relative).parts
-    if any(part in ("", ".", "..") for part in parts):
-        return None
-    target = (ASSETS / relative).resolve()
-    try:
-        target.relative_to(ASSETS.resolve())
-    except ValueError:
-        return None
-    if not target.is_file():
-        return None
-    return target
 
 
 def read_json(path):
@@ -149,6 +135,25 @@ def build_pdf(lines):
     return bytes(out)
 
 
+def asset_file(url_path):
+    if not url_path.startswith("/assets/"):
+        return None
+    relative = url_path[len("/assets/"):]
+    if not relative or relative.startswith(("/", "\\")) or "\\" in relative:
+        return None
+    parts = Path(relative).parts
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    target = (ASSETS / relative).resolve()
+    try:
+        target.relative_to(ASSETS.resolve())
+    except ValueError:
+        return None
+    if not target.is_file():
+        return None
+    return target
+
+
 def report_lines(dream, payments):
     saved = sum(float(p["amount"]) for p in payments)
     price = float(dream["price"])
@@ -201,7 +206,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send(200, HTML.read_text(encoding="utf-8"), "text/html; charset=utf-8")
             return
         if path == "/api/data":
-            payload = {"dreams": read_json(DREAMS), "payments": read_json(PAYMENTS)}
+            payload = {key: read_json(path) for key, path in FILES.items()}
             self.send(200, json.dumps(payload), "application/json; charset=utf-8")
             return
         if path.startswith("/api/report/"):
@@ -212,12 +217,12 @@ class Handler(BaseHTTPRequestHandler):
             if not dream:
                 self.send(404, "Dream no encontrado", "text/plain; charset=utf-8")
                 return
-            safe = "".join(c if c.isalnum() else "-" for c in dream["name"]).strip("-") or "dream"
+            safe = "".join(c if c.isascii() and c.isalnum() else "-" for c in dream["name"]).strip("-") or "dream"
             pdf = build_pdf(report_lines(dream, payments))
             self.send(200, pdf, "application/pdf", f"reporte-{safe}.pdf")
             return
         asset = asset_file(path)
-        if asset is not None:
+        if asset:
             mime = ASSET_TYPES.get(asset.suffix.lower(), "application/octet-stream")
             self.send(200, asset.read_bytes(), mime)
             return
@@ -228,20 +233,33 @@ class Handler(BaseHTTPRequestHandler):
             self.send(404, "No encontrado", "text/plain; charset=utf-8")
             return
         length = int(self.headers.get("Content-Length", "0"))
-        payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
-        dreams = payload.get("dreams", [])
-        payments = payload.get("payments", [])
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except (ValueError, UnicodeDecodeError):
+            self.send(400, '{"ok":false,"error":"JSON invalido"}', "application/json")
+            return
+        if not isinstance(payload, dict):
+            self.send(400, '{"ok":false,"error":"Se esperaba un objeto"}', "application/json")
+            return
         DATA.mkdir(exist_ok=True)
-        write_json(DREAMS, dreams)
-        write_json(PAYMENTS, payments)
+        # Only overwrite collections that were sent, so older clients never wipe new files.
+        for key, path in FILES.items():
+            if key in payload:
+                value = payload[key]
+                if not isinstance(value, list):
+                    self.send(400, json.dumps({"ok": False, "error": f"{key} debe ser una lista"}), "application/json")
+                    return
+        for key, path in FILES.items():
+            if key in payload:
+                write_json(path, payload[key])
         self.send(200, '{"ok":true}', "application/json")
 
 
 if __name__ == "__main__":
     DATA.mkdir(exist_ok=True)
-    for path in (DREAMS, PAYMENTS):
+    for path in FILES.values():
         if not path.exists():
             write_json(path, [])
-    server = ThreadingHTTPServer(("127.0.0.1", 8765), Handler)
-    print("Abre http://127.0.0.1:8765")
+    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    print(f"Abre http://127.0.0.1:{PORT}")
     server.serve_forever()

@@ -1,6 +1,6 @@
 # Brief de diseño — Calma precisa
 
-Dirección visual para Ahorro y dreams, octubre 2026. El producto sigue siendo un registro local de metas (dreams), abonos y reporte PDF. El rediseño cambia la presentación, no el modelo de datos.
+Dirección visual para Ahorro, octubre 2026. El producto es un registro local con cuatro vistas: resumen, dreams (metas y abonos), gastos y ventas. El rediseño cambia la presentación, no el modelo de datos.
 
 ## Dirección elegida
 
@@ -9,7 +9,7 @@ Dirección visual para Ahorro y dreams, octubre 2026. El producto sigue siendo u
 Se descartó seguir el póster centrado sobre negro que tenía la app. También se descartó copiar una marca concreta:
 
 - Revolut ordena un super-app con el saldo arriba y el resto en revelado progresivo. Aquí no hay diez productos; copiar ese cromo sobra. Sí se toma la jerarquía: una cifra principal y las acciones frecuentes a la vista ([Gummble, 2026](https://gummble.com/blog/fintech-dashboard-ui-design)).
-- Nubank separa la vida del dinero en modelos mentales (mover, planear, comprar). Esta app es solo “planear”: un dream equivale a una caja con avance, no a un banco completo ([Building Nubank](https://building.nubank.com/how-we-created-tabs/)).
+- Nubank separa la vida del dinero en modelos mentales (mover, planear, comprar). Aquí eso se vuelve cuatro pestañas: resumen, dreams, gastos y ventas. Cada una responde una pregunta y no se mezclan en la misma pantalla ([Building Nubank](https://building.nubank.com/how-we-created-tabs/)).
 - Mercury reserva el lienzo claro `#fbfcfd` al producto autenticado, un solo acento y mucho aire. Ese es el pariente más cercano de una herramienta personal ([Mercury, shadcn.io](https://www.shadcn.io/design/mercury), [Masterly](https://www.themasterly.com/blog/fintech-dashboard-design-guide)).
 - Copilot abre con resumen, barras y color semántico (ingreso, gasto, aviso), no con una hoja de cálculo ([Blake Crosley](https://blakecrosley.com/guides/design/copilot-money), [OpenDesign](https://opendesign.cc/en/sites/copilot-money)).
 - Monzo usa los Pots y un micro-feedback al cumplir un hábito, sin convertir la pantalla en un juego ([Lazarev](https://www.lazarev.agency/articles/fintech-app-design)).
@@ -155,6 +155,17 @@ Qué se mueve y por qué:
 - Barras con `role="progressbar"` y valor numérico.
 - Toasts en una región `aria-live="polite"`.
 - Enlace “Saltar al contenido”.
+
+## Vistas
+
+La misma paleta cubre las cuatro secciones. El color sigue siendo semántico:
+
+- **Dreams:** la barra de avance usa `--progress`. El dinero ahorrado y los abonos usan `--income`. Al cruzar el 100% hay toast y una ráfaga de 400ms.
+- **Gastos:** montos en `--expense`, con el signo menos y la palabra de la categoría. La barra del resumen por categoría usa el mismo rojo, sobre `--expense-soft`, para no confundirla con una meta.
+- **Ventas:** la ganancia positiva usa `--income` y un signo más. La pérdida usa `--expense`. “Pendiente” es un chip de `--warning` con texto, no solo color. “Vendido” es un chip de ingreso.
+- **Resumen:** el ahorro general (ganancias de lo vendido) es la cifra hero. Si es negativa, pasa a `--expense`. Al lado, lo ahorrado en dreams y los gastos del mes.
+
+Editar un dream abre el mismo diálogo nativo (nombre, precio y fecha límite). Marcar un artículo como vendido sigue en la fila, con el formulario corto que ya tenía la app.
 
 ## Fuentes consultadas
 
